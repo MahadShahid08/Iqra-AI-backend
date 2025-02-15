@@ -30,7 +30,8 @@ const userSchema = new mongoose.Schema({
     id: String,
     name: String,
     nameAr: String,
-    baseUrl: String
+    baseUrl: String,
+    imagePath: String  // Added this field
   }
 }, {
   timestamps: true

@@ -48,15 +48,15 @@ export const authController = {
   register: async (req, res) => {
     try {
       const { name, email, password } = req.body;
-
+  
       const existingUser = await User.findOne({ email });
       if (existingUser) {
         return res.status(400).json({ message: 'Email already registered' });
       }
-
+  
       const verificationCode = generateVerificationCode();
       const hashedVerificationCode = await bcrypt.hash(verificationCode, 10);
-
+  
       // Create new user with all required fields properly initialized
       const user = new User({
         name,
@@ -69,12 +69,13 @@ export const authController = {
           id: null,
           name: null,
           nameAr: null,
-          baseUrl: null
+          baseUrl: null,
+          imagePath: null  // Added this field initialization
         }
       });
-
+  
       await user.save();
-
+  
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
         to: email,
@@ -91,7 +92,7 @@ export const authController = {
           </div>
         `
       });
-
+  
       res.status(201).json({ 
         message: 'Registration successful. Please check your email for verification code.',
         userId: user._id
@@ -106,37 +107,37 @@ export const authController = {
   login: async (req, res) => {
     try {
       const { email, password } = req.body;
-
+  
       const user = await User.findOne({ email });
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-
+  
       if (!user.isVerified) {
         return res.status(401).json({ 
           message: 'Please verify your email first',
           userId: user._id
         });
       }
-
+  
       const isValidPassword = await user.comparePassword(password);
       if (!isValidPassword) {
         return res.status(401).json({ message: 'Invalid password' });
       }
-
+  
       const token = jwt.sign(
         { userId: user._id },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
-
+  
       res.json({
         token,
         user: {
           id: user._id,
           name: user.name,
           email: user.email,
-          favoriteReciter: user.favoriteReciter
+          favoriteReciter: user.favoriteReciter  // This will now include the imagePath
         }
       });
     } catch (error) {
@@ -150,31 +151,31 @@ export const authController = {
     try {
       const { userId, code } = req.body;
       const user = await User.findById(userId);
-
+  
       if (!user || !user.verificationCode) {
         return res.status(400).json({ message: 'Invalid verification request' });
       }
-
+  
       if (user.verificationCodeExpiry < Date.now()) {
         return res.status(400).json({ message: 'Verification code has expired' });
       }
-
+  
       const isValidCode = await bcrypt.compare(code, user.verificationCode);
       if (!isValidCode) {
         return res.status(400).json({ message: 'Invalid verification code' });
       }
-
+  
       user.isVerified = true;
       user.verificationCode = undefined;
       user.verificationCodeExpiry = undefined;
       await user.save();
-
+  
       const token = jwt.sign(
         { userId: user._id },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
-
+  
       res.json({
         message: 'Email verified successfully',
         token,
@@ -182,7 +183,7 @@ export const authController = {
           id: user._id,
           name: user.name,
           email: user.email,
-          favoriteReciter: user.favoriteReciter
+          favoriteReciter: user.favoriteReciter  // This will include the imagePath
         }
       });
     } catch (error) {
@@ -319,22 +320,23 @@ export const authController = {
       }
   
       const { reciter } = req.body;
-      console.log('Received reciter data:', reciter); // Add this log
+      console.log('Received reciter data:', reciter);
   
       const user = await User.findById(decoded.userId);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
   
-      // Make sure all fields are being set
+      // Make sure all fields are being set, including the image path
       user.favoriteReciter = {
         id: reciter.id,
         name: reciter.name,
         nameAr: reciter.nameAr,
-        baseUrl: reciter.baseUrl
+        baseUrl: reciter.baseUrl,
+        imagePath: reciter.image  // Store the image path
       };
   
-      console.log('Saving user with reciter:', user.favoriteReciter); // Add this log
+      console.log('Saving user with reciter:', user.favoriteReciter);
       await user.save();
   
       res.json({
@@ -351,7 +353,6 @@ export const authController = {
       res.status(500).json({ message: 'Failed to update reciter' });
     }
   },
-
   // Verify auth token
   verifyToken: async (req, res) => {
     try {
