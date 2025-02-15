@@ -327,13 +327,13 @@ export const authController = {
         return res.status(404).json({ message: 'User not found' });
       }
   
-      // Make sure all fields are being set, including the image path
+      // Make sure all fields are being set
       user.favoriteReciter = {
         id: reciter.id,
         name: reciter.name,
         nameAr: reciter.nameAr,
         baseUrl: reciter.baseUrl,
-        imagePath: reciter.image  // Store the image path
+        imagePath: reciter.imagePath  // Changed from reciter.image to reciter.imagePath
       };
   
       console.log('Saving user with reciter:', user.favoriteReciter);
